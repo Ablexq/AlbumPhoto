@@ -180,10 +180,7 @@ public class FileUtils {
     }
 
     /**
-     *
-     * @param activity
-     * @param uri
-     * @param requestCode
+     * 返回bitmap
      */
     public static void cropPhoto(Activity activity, Uri uri, int requestCode) {
         Intent intent = new Intent("com.android.camera.action.CROP");
@@ -196,6 +193,24 @@ public class FileUtils {
         intent.putExtra("outputX", 150);
         intent.putExtra("outputY", 150);
         intent.putExtra("return-data", true);
+        activity.startActivityForResult(intent, requestCode);
+    }
+
+    /**
+     * 返回URI
+     */
+    public static void cropPhoto2(Activity activity, Uri uri, int requestCode) {
+        Intent intent = new Intent("com.android.camera.action.CROP");
+        intent.setDataAndType(uri, "image/*");
+        intent.putExtra("crop", "true");
+        // aspectX aspectY 是宽高的比例
+        intent.putExtra("aspectX", 1);
+        intent.putExtra("aspectY", 1);
+        // outputX outputY 是裁剪图片宽高
+        intent.putExtra("outputX", 150);
+        intent.putExtra("outputY", 150);
+        intent.putExtra("return-data", false);
+        intent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
         activity.startActivityForResult(intent, requestCode);
     }
 

@@ -4,11 +4,12 @@ import android.Manifest;
 import android.annotation.TargetApi;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
-import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -19,10 +20,19 @@ import com.example.lenovo.myalbumtest.utils.FileUtils;
 import com.example.lenovo.myalbumtest.utils.ImageUtils;
 import com.example.lenovo.myalbumtest.utils.PermissionUtils;
 import com.example.lenovo.myalbumtest.views.CircleImageView;
+import com.xq.myandroid7.FileProvider7;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 
 
+//参考:
+// Android 7.0 行为变更 通过FileProvider在应用间共享文件吧(鸿洋)
+// https://blog.csdn.net/lmj623565791/article/details/72859156
+//  Android圆形头像，拍照后“无法加载此图片”的问题解决（适配Android7.0）
+//  http://www.cnblogs.com/liushengchieh/p/7627271.html
+//
 @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
@@ -39,6 +49,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public static final int REQ_TAKE_PHOTO = 100;
     public static final int REQ_ALBUM = 101;
     public static final int REQ_ZOOM = 102;
+    private Uri outputUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,31 +88,33 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         switch (requestCode) {
             case REQ_ALBUM:
                 if (resultCode == RESULT_OK) {
-                    FileUtils.cropPhoto(this, data.getData(), REQ_ZOOM);//裁剪图片
+                    startActivityForResult(cutForPhoto(data.getData()), REQ_ZOOM);
                 }
                 break;
 
             case REQ_TAKE_PHOTO:
                 if (resultCode == RESULT_OK) {
-                    File temp = FileUtils.getTempFile(this);
-                    FileUtils.cropPhoto(this, FileUtils.getImageContentUri(this, temp), REQ_ZOOM);//裁剪图片
+                    startActivityForResult(cutForCamera(), REQ_ZOOM);
                 }
                 break;
 
             case REQ_ZOOM:
                 if (data != null) {
-                    Bundle extras = data.getExtras();
-                    Bitmap bitmap = extras.getParcelable("data");
-                    if (bitmap != null) {
-                        /**
-                         * 上传服务器代码
-                         */
-                        ImageUtils.saveImageToLocal(this, bitmap);//保存在SD卡中
-                        circleImage.setImageBitmap(bitmap);//用ImageView显示出来
-                        if (bitmap.isRecycled()) {
-                            bitmap.recycle();
+                    try {
+                        //获取裁剪后的图片，并显示出来
+                        Bitmap bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(outputUri));
+
+                        if (bitmap != null) {
+                            ImageUtils.saveImageToLocal(this, bitmap);//保存在SD卡中
+                            circleImage.setImageBitmap(bitmap);//用ImageView显示出来
+                            if (bitmap.isRecycled()) {
+                                bitmap.recycle();
+                            }
                         }
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
                     }
+
                 }
                 break;
             default:
@@ -110,6 +123,72 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
+    private Intent cutForCamera() {
+        try {
+            Intent intent = new Intent("com.android.camera.action.CROP");
+            getOutputUri("cut_camera.png");
+            setIntent(intent, getInputUri(intent), outputUri);
+            return intent;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private Intent cutForPhoto(Uri uri) {
+        try {
+            Intent intent = new Intent("com.android.camera.action.CROP");
+            getOutputUri("cut_photo.png");
+            setIntent(intent, uri, outputUri);
+            return intent;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    /**
+     * 拍照才需要
+     */
+    private Uri getInputUri(Intent intent) {
+        //tempFile需要与拍照openCamera传入的文件一致
+        File tempFile = FileUtils.getTempFile(this);
+        if (Build.VERSION.SDK_INT >= 24) {
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        }
+
+        return FileProvider7.getUriForFile(this, tempFile);
+    }
+
+    private void getOutputUri(String imgName) throws IOException {
+        //设置裁剪之后的图片路径文件
+        File cutfile = new File(Environment.getExternalStorageDirectory().getPath(), imgName);
+        if (cutfile.exists()) {
+            cutfile.delete();
+        }
+        cutfile.createNewFile();
+
+        outputUri = Uri.fromFile(cutfile);
+    }
+
+    private void setIntent(Intent intent, Uri inputUri, Uri outputUri) {
+        intent.putExtra("crop", true);
+        intent.putExtra("aspectX", 1);
+        intent.putExtra("aspectY", 1);
+        intent.putExtra("outputX", "150");
+        intent.putExtra("outputY", "150");
+        intent.putExtra("scale", true);
+        intent.putExtra("return-data", false);//true返回bitmap，false返回URI
+        if (inputUri != null) {
+            intent.setDataAndType(inputUri, "image/*");
+        }
+        if (outputUri != null) {
+            intent.putExtra(MediaStore.EXTRA_OUTPUT, outputUri);
+        }
+        intent.putExtra("noFaceDetection", true);
+        intent.putExtra("outputFormat", Bitmap.CompressFormat.JPEG.toString());
+    }
 
     /**
      * 打开相册：
@@ -126,19 +205,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void openCamera() {
         // 指定调用相机拍照后照片的储存路径
         File file = FileUtils.getTempFile(this);
-
         //获取Uri:适配7.0
-        Uri imgUri;
-        if (Build.VERSION.SDK_INT >= 24) {
-            //如果是7.0或以上
-            imgUri = FileProvider.getUriForFile(this, getApplicationContext().getPackageName() + ".fileprovider", file);
-        } else {
-            imgUri = Uri.fromFile(file);
-        }
+        Uri imgUri = FileProvider7.getUriForFile(this, file);
 
         //跳转相机
         Intent intent2 = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        intent2.putExtra(MediaStore.EXTRA_OUTPUT, imgUri);
+        intent2.putExtra(MediaStore.EXTRA_OUTPUT, imgUri);//拍照才需要传入URI
         startActivityForResult(intent2, REQ_TAKE_PHOTO);
     }
 
