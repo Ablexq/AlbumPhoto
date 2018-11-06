@@ -8,6 +8,12 @@
     tools:context="com.example.lenovo.myalbumtest.MainActivity">
 
     <Button
+        android:id="@+id/btn_set"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="弹框设置头像" />
+
+    <Button
         android:id="@+id/btn_album"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

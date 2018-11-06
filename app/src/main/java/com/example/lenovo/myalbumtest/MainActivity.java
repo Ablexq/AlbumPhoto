@@ -5,16 +5,20 @@ import android.annotation.TargetApi;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
+import android.support.design.widget.BottomSheetDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.Window;
 import android.widget.Button;
+import android.widget.Toast;
 
 import com.example.lenovo.myalbumtest.utils.AlbunPhotoHelper;
 import com.example.lenovo.myalbumtest.utils.BitmapUtils;
@@ -22,6 +26,7 @@ import com.example.lenovo.myalbumtest.utils.FileUtils;
 import com.example.lenovo.myalbumtest.utils.ImageUtils;
 import com.example.lenovo.myalbumtest.utils.PermissionUtils;
 import com.example.lenovo.myalbumtest.views.CircleImageView;
+import com.example.lenovo.myalbumtest.views.MyBottomSheetDialog;
 import com.xq.myandroid7.FileProvider7;
 
 import java.io.File;
@@ -36,12 +41,14 @@ import java.io.IOException;
 //  http://www.cnblogs.com/liushengchieh/p/7627271.html
 //
 @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, MyBottomSheetDialog.OnClickDialogListener {
 
     private CircleImageView circleImage;
     private Button btnAlbum;
     private Button btnCamera;
     private AlbunPhotoHelper albunPhotoHelper;
+    private Button btnSet;
+    private MyBottomSheetDialog myBottomSheetDialog;
 
 
     @Override
@@ -52,11 +59,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         circleImage = ((CircleImageView) this.findViewById(R.id.circleImage));
         btnAlbum = ((Button) this.findViewById(R.id.btn_album));
         btnCamera = ((Button) this.findViewById(R.id.btn_camera));
+        btnSet = ((Button) this.findViewById(R.id.btn_set));
         btnAlbum.setOnClickListener(this);
         btnCamera.setOnClickListener(this);
+        btnSet.setOnClickListener(this);
 
         albunPhotoHelper = new AlbunPhotoHelper(this);
+        myBottomSheetDialog = new MyBottomSheetDialog(this);
+        myBottomSheetDialog.initDialog(MainActivity.this, this);
     }
+
 
     @Override
     public void onClick(View v) {
@@ -71,6 +83,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (PermissionUtils.setPermission(this, PermissionUtils.PERMISSION_CAMERA, PermissionUtils.REQUESTCODE_CAMERA)) {
                     albunPhotoHelper.openCamera();
                 }
+                break;
+
+            case R.id.btn_set:
+                myBottomSheetDialog.show();
                 break;
         }
     }
@@ -98,11 +114,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (data != null) {
                     try {
                         //获取裁剪后的图片，并显示出来
-                        Bitmap bitmap = albunPhotoHelper.getBitmap();
+                        final Bitmap bitmap = albunPhotoHelper.getBitmap();
 
                         if (bitmap != null) {
-                            ImageUtils.saveImageToLocal(this, bitmap);//保存在SD卡中
                             circleImage.setImageBitmap(bitmap);//用ImageView显示出来
+
+                            new Thread(new Runnable() {//流操作放在子线程
+                                @Override
+                                public void run() {
+                                    ImageUtils.saveImageToLocal(MainActivity.this, bitmap);//保存在SD卡中
+                                }
+                            }).start();
+
                             if (bitmap.isRecycled()) {
                                 bitmap.recycle();
                             }
@@ -156,5 +179,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
-
+    @Override
+    public void onClickDialog(int pos) {
+        switch (pos) {
+            case MyBottomSheetDialog.CAMERA:
+                if (PermissionUtils.setPermission(MainActivity.this, PermissionUtils.PERMISSION_CAMERA, PermissionUtils.REQUESTCODE_CAMERA)) {
+                    albunPhotoHelper.openCamera();
+                }
+                myBottomSheetDialog.dismiss();
+                break;
+            case MyBottomSheetDialog.ALBUM:
+                if (PermissionUtils.setPermission(MainActivity.this, PermissionUtils.PERMISSION_READ_EXTERNAL_STORAGE, PermissionUtils.REQUESTCODE_READ_EXTERNAL_STORAGE)) {
+                    albunPhotoHelper.openAlbum();
+                }
+                myBottomSheetDialog.dismiss();
+                break;
+            case MyBottomSheetDialog.CANCLE:
+                myBottomSheetDialog.dismiss();
+                break;
+        }
+    }
 }

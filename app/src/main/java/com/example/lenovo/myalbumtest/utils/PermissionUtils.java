@@ -86,6 +86,7 @@ public class PermissionUtils {
     public static final int REQUESTCODE_SINGLE = 2;
     public static final int REQUESTCODE_READ_EXTERNAL_STORAGE = 3;
     public static final int REQUESTCODE_CAMERA = 4;
+    public static final int REQUESTCODE_WRITE_EXTERNAL_STORAGE = 4;
 
     public static final String[] PERMISSION_RECORD_AUDIO = {Manifest.permission.RECORD_AUDIO};
     public static final String[] PERMISSION_GET_ACCOUNTS = {Manifest.permission.GET_ACCOUNTS};
