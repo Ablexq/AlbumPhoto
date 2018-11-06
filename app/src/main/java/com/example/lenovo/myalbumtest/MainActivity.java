@@ -52,23 +52,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         circleImage = ((CircleImageView) this.findViewById(R.id.circleImage));
         btnAlbum = ((Button) this.findViewById(R.id.btn_album));
         btnCamera = ((Button) this.findViewById(R.id.btn_camera));
+        btnAlbum.setOnClickListener(this);
+        btnCamera.setOnClickListener(this);
 
         albunPhotoHelper = new AlbunPhotoHelper(this);
-        if (PermissionUtils.setPermission(this, AlbunPhotoHelper.REQUEST_PERMISSIONS, PermissionUtils.REQUESTCODE_MULTI)) {
-            btnAlbum.setOnClickListener(this);
-            btnCamera.setOnClickListener(this);
-        }
     }
 
     @Override
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.btn_album:
-                albunPhotoHelper.openAlbum();
+                if (PermissionUtils.setPermission(this, PermissionUtils.PERMISSION_READ_EXTERNAL_STORAGE, PermissionUtils.REQUESTCODE_READ_EXTERNAL_STORAGE)) {
+                    albunPhotoHelper.openAlbum();
+                }
                 break;
 
             case R.id.btn_camera:
-                albunPhotoHelper.openCamera();
+                if (PermissionUtils.setPermission(this, PermissionUtils.PERMISSION_CAMERA, PermissionUtils.REQUESTCODE_CAMERA)) {
+                    albunPhotoHelper.openCamera();
+                }
                 break;
         }
     }
@@ -134,15 +136,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             @Override
             public void onPermissionGranted(int requestCode) {
                 Log.e("PermissionUtils", "授权回调结果111：成功");
-                btnAlbum.setOnClickListener(MainActivity.this);
-                btnCamera.setOnClickListener(MainActivity.this);
+
+                if (requestCode == PermissionUtils.REQUESTCODE_READ_EXTERNAL_STORAGE) {
+                    albunPhotoHelper.openAlbum();
+                } else if (requestCode == PermissionUtils.REQUESTCODE_CAMERA) {
+                    albunPhotoHelper.openCamera();
+                }
             }
 
             @Override
             public void onPermissionFailure(int requestCode) {
                 Log.e("PermissionUtils", "授权回调结果111：失败");
-                if (requestCode == PermissionUtils.REQUESTCODE_SINGLE) {
-                    PermissionUtils.showRequest(MainActivity.this, AlbunPhotoHelper.REQUEST_PERMISSIONS);
+                if (requestCode == PermissionUtils.REQUESTCODE_READ_EXTERNAL_STORAGE) {
+                    PermissionUtils.showRequest(MainActivity.this, PermissionUtils.PERMISSION_READ_EXTERNAL_STORAGE);
+                } else if (requestCode == PermissionUtils.REQUESTCODE_CAMERA) {
+                    PermissionUtils.showRequest(MainActivity.this, PermissionUtils.PERMISSION_CAMERA);
                 }
             }
         });
