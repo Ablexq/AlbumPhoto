@@ -169,14 +169,29 @@ public class FileUtils {
         }
 
         File file = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/DAI_CAI_HANG");
-        if (!file.exists()) {
-            file.mkdir();
+        if (file.exists()) {//避免图片混乱
+            deleteFile(file);
         }
+        file.mkdir();
 
         //String file_tmp = file + "/" + System.currentTimeMillis() + ".jpg";
         String file_tmp = file + "/tempImg.jpg";
 
         return new File(file_tmp);
+    }
+
+    //flie：要删除的文件夹的所在位置
+    private static void deleteFile(File file) {
+        if (file.isDirectory()) {
+            File[] files = file.listFiles();
+            for (int i = 0; i < files.length; i++) {
+                File f = files[i];
+                deleteFile(f);
+            }
+            file.delete();//如要保留文件夹，只删除文件，请注释这行
+        } else if (file.exists()) {
+            file.delete();
+        }
     }
 
     /**
