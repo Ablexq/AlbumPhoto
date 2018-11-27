@@ -115,14 +115,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     try {
                         //获取裁剪后的图片，并显示出来
                         final Bitmap bitmap = albunPhotoHelper.getBitmap();
+                        final Bitmap qualityBitmap = FileUtils.compressQuality(bitmap);
 
-                        if (bitmap != null) {
-                            circleImage.setImageBitmap(bitmap);//用ImageView显示出来
+                        if (qualityBitmap != null) {
+                            circleImage.setImageBitmap(qualityBitmap);//用ImageView显示出来
 
                             new Thread(new Runnable() {//流操作放在子线程
                                 @Override
                                 public void run() {
-                                    ImageUtils.saveImageToLocal(MainActivity.this, bitmap);//保存在SD卡中
+                                    ImageUtils.saveImageToLocal(MainActivity.this, qualityBitmap);//保存在SD卡中
                                 }
                             }).start();
 

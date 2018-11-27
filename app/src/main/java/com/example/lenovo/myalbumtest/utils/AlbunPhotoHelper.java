@@ -56,7 +56,7 @@ public class AlbunPhotoHelper {
      */
     public void openCamera() {
         // 指定调用相机拍照后照片的储存路径
-        File file = FileUtils.getTempFile(activity);
+        File file = FileUtils.setCacheFile(activity);
         //获取Uri:适配7.0
         Uri imgUri = FileProvider7.getUriForFile(activity, file);
 

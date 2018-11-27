@@ -566,6 +566,13 @@ public final class ImageUtils {
         return bitmap;
     }
 
+
+
+
+
+
+
+
     public static void saveImageToLocal(Context context,Bitmap mBitmap) {
         File file = FileUtils.getTempFile(context);
         if (file == null) {

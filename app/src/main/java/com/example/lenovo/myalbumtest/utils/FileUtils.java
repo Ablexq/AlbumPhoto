@@ -6,12 +6,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
 
 import com.example.lenovo.myalbumtest.MyApplication;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -162,21 +165,41 @@ public class FileUtils {
         activity.startActivityForResult(intent, requestCode);
     }
 
+    public static File setCacheFile(Context context) {//注意：存在则删除
+        if (!FileUtils.isSDCardAvailable()) {
+            ToastUtil.showToast(context, "很抱歉，你的手机没内存卡！");
+            return null;
+        }
+
+        File cacheDir = context.getExternalCacheDir();
+        if (cacheDir == null) {
+            System.out.println("============getExternalStorageDirectory==============");
+            cacheDir = Environment.getExternalStorageDirectory();
+        }
+        File file = new File(cacheDir.getAbsolutePath() + "/DAI_CAI_HANG");
+        if (file.exists()) {
+            deleteFile(file);
+        }
+        file.mkdirs();
+        String file_cache = file + "/tempImg.jpg";
+        System.out.println("file_cache====================="+file_cache);
+        return new File(file_cache);
+    }
+
     public static File getTempFile(Context context) {
         if (!FileUtils.isSDCardAvailable()) {
             ToastUtil.showToast(context, "很抱歉，你的手机没内存卡！");
             return null;
         }
 
-        File file = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/DAI_CAI_HANG");
-        if (file.exists()) {//避免图片混乱
-            deleteFile(file);
+        File cacheDir = context.getExternalCacheDir();
+        if (cacheDir == null) {
+            cacheDir = Environment.getExternalStorageDirectory();
         }
-        file.mkdir();
-
+        File file = new File(cacheDir.getAbsolutePath() + "/DAI_CAI_HANG");
         //String file_tmp = file + "/" + System.currentTimeMillis() + ".jpg";
         String file_tmp = file + "/tempImg.jpg";
-
+        System.out.println("file_tmp====================="+file_tmp);
         return new File(file_tmp);
     }
 
@@ -310,5 +333,19 @@ public class FileUtils {
             e.printStackTrace();
         }
         return croppath;
+    }
+
+    public static Bitmap compressQuality(Bitmap image) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        image.compress(Bitmap.CompressFormat.JPEG, 100, baos);//质量压缩方法，这里100表示不压缩，把压缩后的数据存放到baos中
+        int options = 100;
+        System.out.println("t============"+(baos.toByteArray().length / 1024));
+        while (baos.toByteArray().length / 1024 > 100) { //循环判断如果压缩后图片是否大于100kb,大于继续压缩
+            baos.reset();//重置baos即清空baos
+            image.compress(Bitmap.CompressFormat.JPEG, options, baos);//这里压缩options%，把压缩后的数据存放到baos中
+            options -= 10;//每次都减少10
+        }
+        ByteArrayInputStream isBm = new ByteArrayInputStream(baos.toByteArray());//把压缩后的数据baos存放到ByteArrayInputStream中
+        return BitmapFactory.decodeStream(isBm, null, null);
     }
 }
